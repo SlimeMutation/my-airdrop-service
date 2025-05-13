@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 
 	"github.com/the-web3-contracts/airdrop-service/merkle"
@@ -20,6 +21,17 @@ type Airdrop struct {
 	MerkleTree *merkle.MerkleTree
 }
 
+func MakeLeaf(address string, index int, amount uint64) []byte {
+	addrBytes, _ := hex.DecodeString(address[2:]) // 去掉0x
+	idxBytes := make([]byte, 32)
+	amtBytes := make([]byte, 32)
+	big.NewInt(int64(index)).FillBytes(idxBytes)
+	big.NewInt(int64(amount)).FillBytes(amtBytes)
+	packed := append(addrBytes, append(idxBytes, amtBytes...)...)
+	hash := sha256.Sum256(packed)
+	return hash[:]
+}
+
 func LoadAirdropData(filePath string) (*Airdrop, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -31,9 +43,8 @@ func LoadAirdropData(filePath string) (*Airdrop, error) {
 	}
 	var leaves [][]byte
 	for index, entry := range entries {
-		leafData := fmt.Sprintf("%s%d%d", entry.Address, index, entry.Amount)
-		leafHash := sha256.Sum256([]byte(leafData))
-		leaves = append(leaves, leafHash[:])
+		leafHash := MakeLeaf(entry.Address, index, entry.Amount)
+		leaves = append(leaves, leafHash)
 	}
 	tree := merkle.NewMerkleTree(leaves)
 	return &Airdrop{

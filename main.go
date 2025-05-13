@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -19,20 +18,20 @@ func main() {
 	root := airdropData.MerkleTree.Root()
 	fmt.Printf("Merkle Root: %s\n", hex.EncodeToString(root))
 
-	address := "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+	address := "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
 	proof, amount, index, err := airdropData.GetProof(address)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Printf("Address: %s\n", address)
+	fmt.Printf("index: %d\n", index)
 	fmt.Printf("Amount: %d\n", amount)
 	fmt.Printf("Proof: %v\n", airdrop.HexProof(proof))
 
-	leafData := fmt.Sprintf("%s%d%d", address, index, amount)
-	leafHash := sha256.Sum256([]byte(leafData))
+	leafHash := airdrop.MakeLeaf(address, index, amount)
 
-	valid := merkle.VerifyProof(leafHash[:], root, proof, index)
+	valid := merkle.VerifyProof(leafHash, root, proof, index)
 	if valid {
 		fmt.Println("Merkle Proof verified successfully!")
 	} else {
